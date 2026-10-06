@@ -2,18 +2,19 @@
 
 `checks/vibe/check.mjs` scans tracked source for mistakes that show up in AI-written projects. The catalog is 100 items in `checks/vibe/rules.mjs`.
 
-## What fails
+## Report
 
-`error` findings exit 1. `warning` findings are printed and do not fail. `review` items are titles only. A regex cannot judge them, so they stay on the list for a person.
+Every run executes all 100 checks. It does not stop at the first hit, and it does not change your code. A hit is a suggestion. Checks that need a person are marked "Not automated" in the same table.
 
 ```sh
-node checks/vibe/check.mjs --root .
-node checks/vibe/check.mjs --root . --fail-on warning
+node checks/vibe/check.mjs --root /path/to/project --report vibe-report.md
 ```
 
-Code Home runs this on every push to `main`, on pull requests, and from the Actions tab (`workflow_dispatch`).
+The markdown file starts with a summary table, then one row per check, then the suggestion details. `vibe-report.md` is gitignored.
 
-A finding on a changed line becomes a review comment on that line. A finding that is not on a changed line becomes one general pull request comment. A `debugger` statement is the one edit the job will make itself: on a push to `main` it opens a pull request with that line removed. Other findings stay comments, because guessing a rewrite would be the slop this check is meant to catch.
+Code Home runs this on every push to `main`, when a pull request is opened or updated, and from the Actions tab. The job uploads `vibe-report.md` as the `vibe-report` artifact and does not comment on the pull request. The public log only shows the three counts. Download the artifact from the run for the table and the file locations.
+
+On a public repository, anyone who can see Actions can download that artifact. It is not posted on the pull request. Emailing it needs a mail secret this repo does not have.
 
 ## What it skips
 

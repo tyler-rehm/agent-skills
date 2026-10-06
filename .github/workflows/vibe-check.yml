@@ -1,14 +1,8 @@
 name: Vibe check
 on:
   workflow_call:
-    inputs:
-      fail_on:
-        description: error or warning
-        type: string
-        default: error
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -20,20 +14,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: tyler-rehm/agent-skills
-          ref: v1.1
+          ref: v1.2
           path: checker
           sparse-checkout: checks
           persist-credentials: false
-      - id: scan
-        working-directory: source
-        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/check.mjs" --root . --json "$GITHUB_WORKSPACE/findings.json" --fail-on "${{ inputs.fail_on }}"
-        continue-on-error: true
-      - if: always()
-        working-directory: source
-        env:
-          FINDINGS_PATH: ${{ github.workspace }}/findings.json
-          SOURCE_ROOT: ${{ github.workspace }}/source
-          GITHUB_TOKEN: ${{ github.token }}
-        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/suggest.mjs"
-      - if: steps.scan.outcome == 'failure'
-        run: exit 1
+      - working-directory: source
+        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/check.mjs" --root . --report "$GITHUB_WORKSPACE/vibe-report.md" --quiet --fail-on none
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: vibe-report
+          path: vibe-report.md
+          retention-days: 14

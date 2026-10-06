@@ -3,6 +3,7 @@ import { execFileSync } from 'node:child_process'
 import { appendFileSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { materialize, rules as rawRules } from './rules.mjs'
+import { renderReport } from './report.mjs'
 
 const rules = rawRules.map(materialize)
 const TEXT = new Set(['js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'py', 'go', 'rb', 'php', 'java', 'rs', 'vue', 'svelte', 'css', 'html', 'yml', 'yaml', 'sh', 'toml', 'env'])
@@ -157,23 +158,21 @@ export function summarize(findings) {
 
 function main() {
   const root = argValue('--root') ?? process.argv.find((arg) => !arg.startsWith('-') && arg !== process.argv[0] && arg !== process.argv[1]) ?? process.cwd()
-  const failOn = argValue('--fail-on') ?? 'error'
+  const failOn = argValue('--fail-on') ?? 'none'
   const findings = scan(root)
-  const summary = summarize(findings)
+  const report = renderReport(findings)
+  const reportPath = argValue('--report')
+  if (reportPath) writeFileSync(reportPath, report.markdown)
   const jsonPath = argValue('--json')
   if (jsonPath) writeFileSync(jsonPath, JSON.stringify(findings, null, 2))
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`)
-  if (process.env.GITHUB_ACTIONS) {
-    for (const item of findings) {
-      const level = item.severity === 'error' ? 'error' : 'warning'
-      const message = `${item.id} ${item.title}${item.extra ? ` (${item.extra})` : ''}`.replaceAll('\n', ' ')
-      console.log(`::${level} file=${item.file},line=${item.line}::${message}`)
-    }
-  }
-  console.log(summary)
-  const ranks = { review: 0, warning: 1, error: 2 }
-  const threshold = ranks[failOn] ?? 2
-  const failed = findings.some((item) => (ranks[item.severity] ?? 0) >= threshold && threshold > 0)
+  const quiet = process.argv.includes('--quiet')
+  const publicLine = `100 checks. ${report.counts.Pass} pass, ${report.counts.Suggestion} suggestions, ${report.counts['Not automated']} not automated.`
+  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${publicLine}\n`)
+  if (quiet) console.log(publicLine)
+  else console.log(reportPath ? `${publicLine}\n${report.markdown}` : summarize(findings))
+  const ranks = { none: 0, review: 0, warning: 1, error: 2 }
+  const threshold = ranks[failOn] ?? 0
+  const failed = threshold > 0 && findings.some((item) => (ranks[item.severity] ?? 0) >= threshold)
   process.exit(failed ? 1 : 0)
 }
 
