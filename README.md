@@ -22,22 +22,22 @@ Checks are one Node script with no dependencies:
 node checks/vibe/check.mjs --root /path/to/project
 ```
 
-Or call the reusable workflows and pin the tag:
+Or call the reusable workflows and pin a tag:
 
 ```yaml
 jobs:
   vibe:
-    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1
+    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.2
   canary:
     uses: tyler-rehm/agent-skills/.github/workflows/ai-canary.yml@v1
 ```
 
-That pin is the only runtime link. Do not add this repo as a package dependency or a git submodule.
+`@v1.2` is the published checker. Branch `vibe-56` is the unsigned draft of the 56-check catalog and is not a tag. That pin is the only runtime link. Do not add this repo as a package dependency or a git submodule.
 
 ## What is here
 
-- `skills/project-starter` — ask which stack to use, then start a repo from the Code Home playbook.
-- `checks/vibe` — 100 vibe-coding mistakes. Errors fail the job. Warnings are printed. The rest is a review list, because a regex cannot judge them.
+- `skills/project-starter` — ask which stack to use, then start a repo. It reads `playbook-source.json` and uses that directory when it is present. [playbook.md](skills/project-starter/playbook.md) is the fallback.
+- `checks/vibe` — 56 signed checks. Every check runs. A hit is a suggestion and does not fail the job. Questions a scanner cannot answer are not in this repo.
 - `canary` — the AI review canary. An agent that follows `AGENTS.md` marks the change. A human removes the mark after reading the diff.
 
 `node --test` runs the unit tests.

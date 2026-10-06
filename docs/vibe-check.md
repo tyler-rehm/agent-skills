@@ -16,7 +16,7 @@ The markdown file starts with a summary table, then one row per check, then the 
 
 Code Home runs this on every push to `main`, when a pull request is opened or updated, and from the Actions tab. The job uploads `vibe-report.md` as the `vibe-report` artifact and does not comment on the pull request. The public log only shows the three counts. Download the artifact from the run for the table and the file locations.
 
-On a public repository, anyone who can see Actions can download that artifact. It is not posted on the pull request. Emailing it needs a mail secret this repo does not have.
+On a public repository, anyone who can see Actions can download that artifact. It is not posted on the pull request. A later job in the caller workflow can mail the file. This reusable workflow does not receive that mail secret.
 
 ## What it skips
 
