@@ -22,10 +22,15 @@ node checks/vibe/check.mjs --root /path/to/project
 Exit 0 means no error-level findings. Warnings are printed and do not fail. Add this to GitHub Actions:
 
 ```yaml
+permissions:
+  contents: write
+  pull-requests: write
 jobs:
   vibe:
-    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1
+    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.1
 ```
+
+`contents: write` is what lets a push to `main` open a fix pull request. The job still fails when an error-level finding remains.
 
 The AI canary is separate. Copy the hard rule from this repo's `AGENTS.md` into the other project's `AGENTS.md`, add the confession box to its pull request template, then:
 

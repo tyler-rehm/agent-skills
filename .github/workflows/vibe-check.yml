@@ -7,7 +7,8 @@ on:
         type: string
         default: error
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -19,9 +20,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: tyler-rehm/agent-skills
-          ref: v1
+          ref: v1.1
           path: checker
           sparse-checkout: checks
           persist-credentials: false
-      - working-directory: source
-        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/check.mjs" --root . --fail-on "${{ inputs.fail_on }}"
+      - id: scan
+        working-directory: source
+        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/check.mjs" --root . --json "$GITHUB_WORKSPACE/findings.json" --fail-on "${{ inputs.fail_on }}"
+        continue-on-error: true
+      - if: always()
+        working-directory: source
+        env:
+          FINDINGS_PATH: ${{ github.workspace }}/findings.json
+          SOURCE_ROOT: ${{ github.workspace }}/source
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/suggest.mjs"
+      - if: steps.scan.outcome == 'failure'
+        run: exit 1

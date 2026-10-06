@@ -11,7 +11,9 @@ node checks/vibe/check.mjs --root .
 node checks/vibe/check.mjs --root . --fail-on warning
 ```
 
-In GitHub Actions the summary is the same report. Code Home calls `vibe-check.yml@v1` on push and pull request.
+Code Home runs this on every push to `main`, on pull requests, and from the Actions tab (`workflow_dispatch`).
+
+A finding on a changed line becomes a review comment on that line. A finding that is not on a changed line becomes one general pull request comment. A `debugger` statement is the one edit the job will make itself: on a push to `main` it opens a pull request with that line removed. Other findings stay comments, because guessing a rewrite would be the slop this check is meant to catch.
 
 ## What it skips
 

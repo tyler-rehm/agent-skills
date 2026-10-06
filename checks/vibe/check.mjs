@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { appendFileSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { materialize, rules as rawRules } from './rules.mjs'
 
@@ -160,7 +160,16 @@ function main() {
   const failOn = argValue('--fail-on') ?? 'error'
   const findings = scan(root)
   const summary = summarize(findings)
+  const jsonPath = argValue('--json')
+  if (jsonPath) writeFileSync(jsonPath, JSON.stringify(findings, null, 2))
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${summary}\n`)
+  if (process.env.GITHUB_ACTIONS) {
+    for (const item of findings) {
+      const level = item.severity === 'error' ? 'error' : 'warning'
+      const message = `${item.id} ${item.title}${item.extra ? ` (${item.extra})` : ''}`.replaceAll('\n', ' ')
+      console.log(`::${level} file=${item.file},line=${item.line}::${message}`)
+    }
+  }
   console.log(summary)
   const ranks = { review: 0, warning: 1, error: 2 }
   const threshold = ranks[failOn] ?? 2
