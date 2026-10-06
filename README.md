@@ -2,6 +2,8 @@
 
 Personal skills and checks for Tyler Rehm's projects. They are plain files. Nothing here is an npm package.
 
+Start here: [Quick start](docs/quick-start.md). Then [vibe check](docs/vibe-check.md) and [AI canary](docs/ai-canary.md).
+
 ## Use them across projects
 
 Copy or symlink a skill into `~/.cursor/skills/`:
