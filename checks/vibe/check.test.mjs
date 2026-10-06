@@ -13,6 +13,7 @@ test('catalog has 100 distinct mistakes', () => {
   for (const rule of rules.map(materialize)) {
     assert.ok(rule.title.length > 8)
     assert.ok(['error', 'warning', 'review'].includes(rule.severity))
+    if (rule.pattern) new RegExp(rule.pattern, 'g')
   }
 })
 
