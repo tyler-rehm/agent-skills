@@ -1,0 +1,22 @@
+name: AI canary
+on:
+  workflow_call:
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tyler-rehm/agent-skills
+          ref: v1
+          path: checker
+          sparse-checkout: canary
+          persist-credentials: false
+      - run: node "$GITHUB_WORKSPACE/checker/canary/ai-canary.mjs"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -1,0 +1,27 @@
+name: Vibe check
+on:
+  workflow_call:
+    inputs:
+      fail_on:
+        description: error or warning
+        type: string
+        default: error
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: source
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: tyler-rehm/agent-skills
+          ref: v1
+          path: checker
+          sparse-checkout: checks
+          persist-credentials: false
+      - working-directory: source
+        run: node "$GITHUB_WORKSPACE/checker/checks/vibe/check.mjs" --root . --fail-on "${{ inputs.fail_on }}"
