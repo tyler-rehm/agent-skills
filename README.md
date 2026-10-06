@@ -1,3 +1,5 @@
+> [!IMPORTANT]
+> Remove this line to confirm a human reviewed this change before submitting.
 # Agent skills
 
 Personal skills and checks for Tyler Rehm's projects. They are plain files. Nothing here is an npm package.

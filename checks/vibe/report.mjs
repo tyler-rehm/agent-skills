@@ -1,4 +1,5 @@
 import { materialize, rules as rawRules } from './rules.mjs'
+import { ruleScope, scopeState } from './files.mjs'
 
 const rules = rawRules.map(materialize)
 
@@ -6,7 +7,7 @@ function cell(value) {
   return String(value ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ')
 }
 
-export function renderReport(findings) {
+export function renderReport(findings, scopes) {
   const hits = new Map()
   for (const finding of findings) {
     if (!hits.has(finding.id)) hits.set(finding.id, [])
@@ -14,17 +15,18 @@ export function renderReport(findings) {
   }
   const rows = rules.map((rule) => {
     const found = hits.get(rule.id) ?? []
-    const automated = rule.kind !== 'review'
-    let result = automated ? 'Pass' : 'Not automated'
-    if (found.length) result = 'Suggestion'
+    const state = scopeState(ruleScope(rule), scopes)
+    let result = 'Pass'
+    if (state === 'na') result = 'Not applicable'
+    if (found.length && state === 'run') result = 'Suggestion'
     return { ...rule, result, found }
   })
-  const counts = { Pass: 0, Suggestion: 0, 'Not automated': 0 }
+  const counts = { Pass: 0, Suggestion: 0, 'Not applicable': 0 }
   for (const row of rows) counts[row.result] += 1
   const lines = [
     '# Vibe check',
     '',
-    'All 100 checks ran. A suggestion can be ignored. Nothing in this report fails the build.',
+    `All ${rules.length} checks ran. A suggestion can be ignored. Nothing in this report fails the build.`,
     '',
     '## Summary',
     '',
@@ -32,7 +34,7 @@ export function renderReport(findings) {
     '| --- | ---: |',
     `| Pass | ${counts.Pass} |`,
     `| Suggestion | ${counts.Suggestion} |`,
-    `| Not automated | ${counts['Not automated']} |`,
+    `| Not applicable | ${counts['Not applicable']} |`,
     '',
     '## All checks',
     '',
