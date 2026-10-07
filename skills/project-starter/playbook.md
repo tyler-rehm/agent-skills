@@ -1,5 +1,7 @@
 # Playbook
 
+Public fallback. The private defaults live outside this repo. `playbook-source.json` points at that directory. Read this file only when that directory is missing.
+
 How Code Home (`tyler-rehm/browser_home`) was built, and which choices travel.
 
 ## What it is

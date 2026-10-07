@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { materialize, rules as rawRules } from './rules.mjs'
+import { extraFindings } from './project.mjs'
 import { renderReport } from './report.mjs'
+import { fileInScope, hasPathSegment, isAssign, isCode, isCommentLine, isConfigText, isGenerated, isGo, isHtmlish, isJs, isPy, isRb, isSourceConfig, isSql, isTestPath, isTs, isWeb, ruleScope } from './files.mjs'
 
 const rules = rawRules.map(materialize)
-const TEXT = new Set(['js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'py', 'go', 'rb', 'php', 'java', 'rs', 'vue', 'svelte', 'css', 'html', 'yml', 'yaml', 'sh', 'toml', 'env'])
+const TEXT = new Set(['js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'py', 'go', 'rb', 'php', 'java', 'rs', 'vue', 'svelte', 'css', 'html', 'yml', 'yaml', 'sh', 'toml', 'env', 'sql', 'prisma', 'json'])
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'coverage', 'fixtures', '.git', 'playwright-report', 'test-results'])
 const SKIP_FILES = new Set(['package-lock.json', 'yarn.lock', 'pnpm-lock.yaml'])
 
@@ -15,66 +17,117 @@ function argValue(flag) {
   return index === -1 ? null : process.argv[index + 1]
 }
 
-export function scan(root) {
+const PLACEHOLDER = /^(password|changeme|example|placeholder|development|secret|test|todo|your-password|admin|admin123|123456)$/i
+const COMMENT_SKIP = new Set(['V007', 'V008', 'V019', 'V022', 'V023', 'V027', 'V063', 'V065', 'V092', 'V097'])
+const FIXTURE_SEGMENTS = new Set(['fixture', 'fixtures'])
+
+export function inspect(root) {
   const files = listFiles(root)
   const findings = []
+  const texts = []
   for (const file of files) {
     const rel = relative(root, file)
     if (SKIP_FILES.has(rel.split('/').pop())) continue
-    if (rel.endsWith('checks/vibe/rules.mjs')) continue
+    if (rel === 'checks/vibe' || rel.startsWith('checks/vibe/')) continue
     const text = readFileSync(file, 'utf8')
+    texts.push({ rel, text })
     for (const rule of rules) {
+      const scope = ruleScope(rule)
+      if (scope !== 'any' && !fileInScope(scope, rel)) continue
       if (rule.kind === 'regex') matchLines(findings, rule, rel, text)
       else if (rule.kind === 'long-file') longFile(findings, rule, rel, text)
       else if (rule.kind === 'tracked-env') trackedEnv(findings, rule, rel)
-      else if (rule.kind === 'dep-range' || rule.kind === 'git-dep') {
-        if (rel.endsWith('package.json')) deps(findings, rule, rel, text)
-      }
     }
   }
-  return findings
+  const scopes = collectScopes(root, texts)
+  findings.push(...extraFindings(root, texts, rules))
+  return { findings, scopes }
+}
+
+export function scan(root) {
+  return inspect(root).findings
 }
 
 function matchLines(findings, rule, rel, text) {
-  if (isTestPath(rel) && rule.id !== 'V071' && rule.id !== 'V072') return
-  if (rule.id === 'V027' && !/^(src|app|lib)\//.test(rel)) return
-  if (rule.id === 'V062' && !/^src\//.test(rel)) return
-  if (rule.id === 'V062' && rel === 'src/server.js') return
+  if (rule.id === 'V079') {
+    if (!isTestPath(rel)) return
+  } else if (isTestPath(rel) && rule.id !== 'V071' && rule.id !== 'V072') return
+  if ((rule.id === 'V027' || rule.id === 'V082') && hasPathSegment(rel, FIXTURE_SEGMENTS)) return
+  if ((rule.id === 'V064' || rule.id === 'V065' || rule.id === 'V082') && isGenerated(rel)) return
   const re = new RegExp(rule.pattern, 'g')
   const lines = text.split(/\r?\n/)
   for (let i = 0; i < lines.length; i += 1) {
-    if (re.test(lines[i])) findings.push(hit(rule, rel, i + 1))
+    if (COMMENT_SKIP.has(rule.id) && isCommentLine(lines[i], rel)) continue
+    if (re.test(lines[i]) && !placeholder(rule, lines[i])) findings.push(hit(rule, rel, i + 1))
     re.lastIndex = 0
   }
 }
 
+function placeholder(rule, line) {
+  if (rule.id !== 'V007') return false
+  const match = line.match(/['"]([^'"]+)['"]/)
+  return Boolean(match && PLACEHOLDER.test(match[1]))
+}
+
 function longFile(findings, rule, rel, text) {
-  if (!/\.(jsx?|tsx?|mjs)$/.test(rel) || /(^|\/)(tests?|__tests__)\//.test(rel)) return
+  if (!isCode(rel) || isTestPath(rel) || isGenerated(rel)) return
   const count = text.split(/\r?\n/).length
   if (count > 800) findings.push(hit(rule, rel, 1, `${count} lines`))
 }
 
 function trackedEnv(findings, rule, rel) {
-  if (rel.endsWith('.example')) return
+  if (/\.(example|sample|template)$/.test(rel) || rel.includes('.example.')) return
   if (/(^|\/)\.env$/.test(rel) || /(^|\/)\.env\.[^/]+$/.test(rel)) findings.push(hit(rule, rel, 1))
 }
 
-function deps(findings, rule, rel, text) {
-  let json
-  try {
-    json = JSON.parse(text)
-  } catch {
-    return
+function collectScopes(root, texts) {
+  const scopes = {
+    js: false,
+    py: false,
+    go: false,
+    rb: false,
+    html: false,
+    web: false,
+    ts: false,
+    code: false,
+    assign: false,
+    sql: false,
+    tests: false,
+    workflow: false,
+    e2e: false,
+    manifest: false,
+    engines: false,
+    config: false,
+    sourceConfig: false,
   }
-  const groups = { ...json.dependencies, ...json.devDependencies }
-  for (const [name, version] of Object.entries(groups ?? {})) {
-    if (rule.kind === 'dep-range' && (version === '*' || version === 'latest')) {
-      findings.push(hit(rule, rel, 1, `${name}@${version}`))
-    }
-    if (rule.kind === 'git-dep' && /^(git\+|github:|gitlab:)/.test(String(version))) {
-      findings.push(hit(rule, rel, 1, `${name}@${version}`))
+  for (const { rel } of texts) {
+    if (isTestPath(rel)) scopes.tests = true
+    if (isJs(rel)) scopes.js = true
+    if (isPy(rel)) scopes.py = true
+    if (isGo(rel)) scopes.go = true
+    if (isRb(rel)) scopes.rb = true
+    if (isConfigText(rel)) scopes.config = true
+    if (isSourceConfig(rel)) scopes.sourceConfig = true
+    if (isTs(rel)) scopes.ts = true
+    if (isHtmlish(rel)) scopes.html = true
+    if (isWeb(rel)) scopes.web = true
+    if (isCode(rel)) scopes.code = true
+    if (isAssign(rel)) scopes.assign = true
+    if (isSql(rel)) scopes.sql = true
+    if (rel.startsWith('.github/workflows/') && /\.ya?ml$/.test(rel)) scopes.workflow = true
+    if (/(^|\/)(playwright|cypress)\.config\.[cm]?[jt]s$/.test(rel)) scopes.e2e = true
+  }
+  const packagePath = join(root, 'package.json')
+  if (existsSync(packagePath)) {
+    scopes.manifest = true
+    try {
+      const json = JSON.parse(readFileSync(packagePath, 'utf8'))
+      if (json.engines?.node) scopes.engines = true
+    } catch {
+      scopes.engines = false
     }
   }
+  return scopes
 }
 
 function hit(rule, file, line, extra) {
@@ -115,10 +168,6 @@ function walk(root, dir, found) {
   }
 }
 
-function isTestPath(rel) {
-  return /(^|\/)(tests?|__tests__|spec)\//.test(rel) || /\.(test|spec)\.[cm]?[jt]sx?$/.test(rel)
-}
-
 function wanted(file) {
   if (file.endsWith('.env')) return true
   const ext = file.split('.').pop()?.toLowerCase()
@@ -136,7 +185,7 @@ export function summarize(findings) {
   const lines = [
     `# Vibe check`,
     ``,
-    `${rules.length} mistakes. ${errors.length} errors, ${warnings.length} warnings. Review items are not automated.`,
+    `${rules.length} checks. ${errors.length} errors, ${warnings.length} warnings.`,
     ``,
   ]
   if (findings.length) {
@@ -159,14 +208,15 @@ export function summarize(findings) {
 function main() {
   const root = argValue('--root') ?? process.argv.find((arg) => !arg.startsWith('-') && arg !== process.argv[0] && arg !== process.argv[1]) ?? process.cwd()
   const failOn = argValue('--fail-on') ?? 'none'
-  const findings = scan(root)
-  const report = renderReport(findings)
+  const { findings, scopes } = inspect(root)
+  const report = renderReport(findings, scopes)
   const reportPath = argValue('--report')
   if (reportPath) writeFileSync(reportPath, report.markdown)
   const jsonPath = argValue('--json')
   if (jsonPath) writeFileSync(jsonPath, JSON.stringify(findings, null, 2))
   const quiet = process.argv.includes('--quiet')
-  const publicLine = `100 checks. ${report.counts.Pass} pass, ${report.counts.Suggestion} suggestions, ${report.counts['Not automated']} not automated.`
+  const suggestionWord = report.counts.Suggestion === 1 ? 'suggestion' : 'suggestions'
+  const publicLine = `${rules.length} checks. ${report.counts.Pass} pass, ${report.counts.Suggestion} ${suggestionWord}, ${report.counts['Not applicable']} not applicable.`
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${publicLine}\n`)
   if (quiet) console.log(publicLine)
   else console.log(reportPath ? `${publicLine}\n${report.markdown}` : summarize(findings))

@@ -11,7 +11,7 @@ mkdir -p "$HOME/.cursor/skills"
 ln -snf "$PWD/skills/project-starter" "$HOME/.cursor/skills/project-starter"
 ```
 
-Cursor then sees `project-starter` in every project. Ask it to start a project. It will ask for the product, runtime, UI, data, hosting, and license before it writes files. The Code Home record is `skills/project-starter/playbook.md`.
+Cursor then sees `project-starter` in every project. Ask it to start a project. It will ask for the product, runtime, UI, data, hosting, and license before it writes files. It reads `playbook-source.json` and uses that directory when it is present. `skills/project-starter/playbook.md` is the fallback.
 
 ## Run the checks on a repo you already have
 
@@ -19,14 +19,14 @@ Cursor then sees `project-starter` in every project. Ask it to start a project. 
 node checks/vibe/check.mjs --root /path/to/project
 ```
 
-Exit 0 means no error-level findings. Warnings are printed and do not fail. Add this to GitHub Actions:
+The run prints one counts line. A suggestion does not fail the command. Add this to GitHub Actions:
 
 ```yaml
 permissions:
   contents: read
 jobs:
   vibe:
-    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.2
+    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.3
 ```
 
 The job uploads `vibe-report.md`. It does not open a pull request or comment. Suggestions do not fail the build.

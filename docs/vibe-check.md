@@ -1,10 +1,12 @@
 # Vibe check
 
-`checks/vibe/check.mjs` scans tracked source for mistakes that show up in AI-written projects. The catalog is 100 items in `checks/vibe/rules.mjs`.
+`checks/vibe/check.mjs` scans tracked source for mistakes that show up in AI-written projects. The catalog is the 56 signed checks in `checks/vibe/rules.mjs`. Questions a scanner cannot answer are not in this repo.
 
 ## Report
 
-Every run executes all 100 checks. It does not stop at the first hit, and it does not change your code. A hit is a suggestion. Checks that need a person are marked "Not automated" in the same table.
+Every run executes all 56 checks. It does not stop at the first hit, and it does not change your code. A hit is a suggestion. A row marked "Not applicable" means that repository has no files of the language or feature that check understands. The report never prints a matched secret, a dependency spec, a raw `uses:` value, or a matched expression.
+
+`@v1.3` is this catalog. Callers that pin `@v1.2` still run the older checker.
 
 ```sh
 node checks/vibe/check.mjs --root /path/to/project --report vibe-report.md
@@ -14,7 +16,7 @@ The markdown file starts with a summary table, then one row per check, then the 
 
 Code Home runs this on every push to `main`, when a pull request is opened or updated, and from the Actions tab. The job uploads `vibe-report.md` as the `vibe-report` artifact and does not comment on the pull request. The public log only shows the three counts. Download the artifact from the run for the table and the file locations.
 
-On a public repository, anyone who can see Actions can download that artifact. It is not posted on the pull request. Emailing it needs a mail secret this repo does not have.
+On a public repository, anyone who can see Actions can download that artifact. It is not posted on the pull request. A later job in the caller workflow can mail the file. This reusable workflow does not receive that mail secret.
 
 ## What it skips
 
