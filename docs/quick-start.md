@@ -26,7 +26,7 @@ permissions:
   contents: read
 jobs:
   vibe:
-    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.3
+    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.3.1
 ```
 
 The job uploads `vibe-report.md`. It does not open a pull request or comment. Suggestions do not fail the build.

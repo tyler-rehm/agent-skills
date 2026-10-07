@@ -27,12 +27,12 @@ Or call the reusable workflows and pin a tag:
 ```yaml
 jobs:
   vibe:
-    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.3
+    uses: tyler-rehm/agent-skills/.github/workflows/vibe-check.yml@v1.3.1
   canary:
     uses: tyler-rehm/agent-skills/.github/workflows/ai-canary.yml@v1
 ```
 
-`@v1.3` is the 56-check catalog. `@v1.2` remains the older checker. `@v1` remains the AI canary. That pin is the only runtime link. Do not add this repo as a package dependency or a git submodule.
+`@v1.3.1` is the 56-check catalog. `@v1.2` remains the older checker. `@v1` remains the AI canary. That pin is the only runtime link. Do not add this repo as a package dependency or a git submodule.
 
 ## What is here
 

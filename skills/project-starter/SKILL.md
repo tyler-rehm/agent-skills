@@ -37,7 +37,7 @@ If they say "like Code Home", use Node, React with Vite, browser-only data, this
 1. Create the repo only when they asked for one. Prefer a public GitHub repo under `tyler-rehm` when the checks must be called with `uses:`.
 2. Add `AGENTS.md` with the product boundary and the canary from this repo's `AGENTS.md`.
 3. Add a pull request template with an unchecked confession box: `This was submitted by an AI agent and no human reviewed it`.
-4. Add the recipes they picked. Pin `ai-canary.yml@v1` and `vibe-check.yml@v1.3`. Pin other actions to a commit SHA. Do not pass secrets into the reusable vibe-check workflow.
+4. Add the recipes they picked. Pin `ai-canary.yml@v1` and `vibe-check.yml@v1.3.1`. Pin other actions to a commit SHA. Do not pass secrets into the reusable vibe-check workflow.
 5. Add a test command and run it. Do not point browser tests at a dev server when a production build exists.
 6. Exact-pin production dependencies. Do not add this skills repo as a package or a submodule.
 7. Stop before deploy, store submission, or a public announcement unless they asked.
