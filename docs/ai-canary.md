@@ -19,4 +19,4 @@ The pull request template has one box that must stay unchecked unless it is true
 
 Checking it, or leaving the README mark in place, fails `.github/workflows/ai-canary.yml`. The job adds the `unreviewed-ai` label and comments. It reads the pull request through the API. It does not check out or run the pull request's code.
 
-Code Home wires that workflow on `pull_request_target` and on issues. A push to `main` does not run it. It has not yet fired on a real pull request there. The unit test in `canary/ai-canary.test.mjs` covers the mark and the checkbox.
+Code Home wires that workflow on `pull_request_target` and on issues. A push to `main` does not run it. The unit test in `canary/ai-canary.test.mjs` covers the mark and the checkbox.

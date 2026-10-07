@@ -6,7 +6,7 @@
 
 Every run executes all 56 checks. It does not stop at the first hit, and it does not change your code. A hit is a suggestion. A row marked "Not applicable" means that repository has no files of the language or feature that check understands. The report never prints a matched secret, a dependency spec, a raw `uses:` value, or a matched expression.
 
-Branch `vibe-56` is the unsigned draft of this catalog. It is not a release tag. Callers that pin `@v1.2` still run the older checker.
+`@v1.3` is this catalog. Callers that pin `@v1.2` still run the older checker.
 
 ```sh
 node checks/vibe/check.mjs --root /path/to/project --report vibe-report.md
